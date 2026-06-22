@@ -506,15 +506,29 @@
                     </div>
                 </div>
 
-                <!-- Baseline Selector Sub-tabs -->
-                <div class="baseline-selector-container">
-                    <span class="baseline-label"><i class="fa-solid fa-sliders"></i> SELECT ROE BASELINE:</span>
-                    <button class="baseline-btn active" id="btn-baseline-2021" onclick="changeBaseline('2021')">
-                        <i class="fa-solid fa-calendar-days"></i> 2021 (Pre-Tightening)
-                    </button>
-                    <button class="baseline-btn" id="btn-baseline-2019" onclick="changeBaseline('2019')">
-                        <i class="fa-solid fa-calendar-days"></i> 2019 (Pre-COVID Baseline)
-                    </button>
+                <!-- Baseline & Period Selector Container -->
+                <div class="baseline-selectors-row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <!-- ROE Baseline Selector -->
+                    <div class="baseline-selector-container" style="margin-bottom: 0; flex: 1; min-width: 300px;">
+                        <span class="baseline-label"><i class="fa-solid fa-sliders"></i> SELECT ROE BASELINE:</span>
+                        <button class="baseline-btn active" id="btn-baseline-2021" onclick="changeBaseline('2021')">
+                            <i class="fa-solid fa-calendar-days"></i> 2021 (Pre-Tightening)
+                        </button>
+                        <button class="baseline-btn" id="btn-baseline-2019" onclick="changeBaseline('2019')">
+                            <i class="fa-solid fa-calendar-days"></i> 2019 (Pre-COVID Baseline)
+                        </button>
+                    </div>
+
+                    <!-- P/E Study Period Selector -->
+                    <div class="baseline-selector-container" style="margin-bottom: 0; flex: 1; min-width: 300px;">
+                        <span class="baseline-label"><i class="fa-solid fa-chart-line"></i> SELECT P/E STUDY PERIOD:</span>
+                        <button class="baseline-btn active" id="btn-period-full-1" onclick="changePeriod('full')">
+                            <i class="fa-solid fa-calendar-days"></i> Full Period (2010 - Current)
+                        </button>
+                        <button class="baseline-btn" id="btn-period-ex-1" onclick="changePeriod('ex_covid')">
+                            <i class="fa-solid fa-filter"></i> Exclude COVID (10-19 & 22-Curr)
+                        </button>
+                    </div>
                 </div>
 
                 <!-- KPI Metric Cards -->
@@ -602,6 +616,17 @@
             <!-- VIEW 2: SECTOR PER ANALYSIS -->
             <div id="view-per" class="dashboard-view">
                 
+                <!-- P/E Study Period Selector -->
+                <div class="baseline-selector-container" style="margin-bottom: 20px;">
+                    <span class="baseline-label"><i class="fa-solid fa-chart-line"></i> SELECT P/E STUDY PERIOD:</span>
+                    <button class="baseline-btn active" id="btn-period-full-2" onclick="changePeriod('full')">
+                        <i class="fa-solid fa-calendar-days"></i> Full Period (2010 - Current)
+                    </button>
+                    <button class="baseline-btn" id="btn-period-ex-2" onclick="changePeriod('ex_covid')">
+                        <i class="fa-solid fa-filter"></i> Exclude COVID (10-19 & 22-Curr)
+                    </button>
+                </div>
+
                 <!-- Summary Box Plot -->
                 <div class="card">
                     <div class="card-header">
@@ -688,7 +713,39 @@
     <script>
         // Global State for Baseline selection
         let currentBaseline = '2021';
-        
+        let currentPeriod = 'full';
+
+        // Helper to retrieve P/E stats based on selected period
+        function getPEStats(s) {
+            if (currentPeriod === 'ex_covid') {
+                return {
+                    Mean: s.Mean_PE_ex_covid,
+                    Std: s.Std_PE_ex_covid,
+                    Min: s.Min_PE_ex_covid,
+                    Max: s.Max_PE_ex_covid,
+                    Minus2SD: s.Minus2SD_PE_ex_covid,
+                    Minus1SD: s.Minus1SD_PE_ex_covid,
+                    Plus1SD: s.Plus1SD_PE_ex_covid,
+                    Plus2SD: s.Plus2SD_PE_ex_covid,
+                    ZScore: s.Current_PE_ZScore_ex_covid,
+                    Status: s.PE_Status_ex_covid
+                };
+            } else {
+                return {
+                    Mean: s.Mean_PE,
+                    Std: s.Std_PE,
+                    Min: s.Min_PE,
+                    Max: s.Max_PE,
+                    Minus2SD: s.Minus2SD_PE,
+                    Minus1SD: s.Minus1SD_PE,
+                    Plus1SD: s.Plus1SD_PE,
+                    Plus2SD: s.Plus2SD_PE,
+                    ZScore: s.Current_PE_ZScore,
+                    Status: s.PE_Status
+                };
+            }
+        }
+
         // Define which sectors are actually main Industries (groups)
         const INDUSTRIES_LIST = ['AGRO', 'CONSUMP', 'FINCIAL', 'INDUS', 'PROPCON', 'RESOURC', 'SERVICE', 'TECH'];
 
@@ -766,6 +823,12 @@
             document.getElementById('roe-select-2').value = 'COMM';
         });
 
+        // Helper to update sidebar footer
+        function updateSidebarFooter() {
+            const periodStr = currentPeriod === 'full' ? '2010 - Current' : '2010-19 & 2022-Current';
+            document.querySelector('.sidebar-footer').innerHTML = `Study Period: ${periodStr}<br>Baseline: Dec ${currentBaseline}`;
+        }
+
         // Switch ROE Baseline
         function changeBaseline(year) {
             currentBaseline = year;
@@ -775,11 +838,46 @@
             document.getElementById('btn-baseline-2019').classList.toggle('active', year === '2019');
             
             // Update sidebar footer
-            document.querySelector('.sidebar-footer').innerHTML = `Study Period: 2010 - Current<br>Baseline: Dec ${year}`;
+            updateSidebarFooter();
             
             // Recalculate KPIs and Screener Tables
             computeKPIs();
             renderScreenerTables();
+        }
+
+        // Switch PER Study Period
+        function changePeriod(period) {
+            currentPeriod = period;
+            
+            // Toggle active classes on period buttons
+            const btnFull1 = document.getElementById('btn-period-full-1');
+            const btnEx1 = document.getElementById('btn-period-ex-1');
+            const btnFull2 = document.getElementById('btn-period-full-2');
+            const btnEx2 = document.getElementById('btn-period-ex-2');
+            
+            if (btnFull1) btnFull1.classList.toggle('active', period === 'full');
+            if (btnEx1) btnEx1.classList.toggle('active', period === 'ex_covid');
+            if (btnFull2) btnFull2.classList.toggle('active', period === 'full');
+            if (btnEx2) btnEx2.classList.toggle('active', period === 'ex_covid');
+            
+            // Update card title in PER Analysis view
+            const periodStr = period === 'full' ? '2010 - Current' : '2010-19 & 2022-Current';
+            const h3Title = document.querySelector('#view-per .card-header h3');
+            if (h3Title) {
+                h3Title.textContent = `PER Valuation Bands - All Sectors (${periodStr})`;
+            }
+
+            // Update sidebar footer
+            updateSidebarFooter();
+            
+            // Recalculate KPIs and Screener Tables
+            computeKPIs();
+            renderScreenerTables();
+            
+            // Redraw PER charts
+            drawPERSummary();
+            drawPEComparison(1);
+            drawPEComparison(2);
         }
 
         // Compute KPIs for metrics cards based on current baseline selection
@@ -793,11 +891,12 @@
             
             sectors.forEach(sec => {
                 const s = SECTOR_SUMMARY[sec];
+                const stats = getPEStats(s);
                 const roeChange = currentBaseline === '2021' ? s.ROE_Change_2021 : s.ROE_Change_2019;
-                const rec = getActionRecommendation(s.Current_PE, s.Minus1SD_PE, s.Mean_PE, roeChange);
+                const rec = getActionRecommendation(s.Current_PE, stats.Minus1SD, stats.Mean, roeChange);
                 if (rec === 'Strong Re-rating Candidate') strongReRates++;
                 if (rec === 'Potential Value Trap') valueTraps++;
-                if (s.Current_PE !== null && s.Current_PE <= s.Minus1SD_PE) below1SD++;
+                if (s.Current_PE !== null && s.Current_PE <= stats.Minus1SD) below1SD++;
             });
             
             document.getElementById('kpi-strong-candidates').textContent = strongReRates;
@@ -859,7 +958,8 @@
                     switchView('per');
                 };
                 
-                const zScore = s.Current_PE_ZScore;
+                const stats = getPEStats(s);
+                const zScore = stats.ZScore;
                 let zBadgeClass = 'badge-avg';
                 if (zScore <= -2) zBadgeClass = 'badge-cheap-2';
                 else if (zScore <= -1) zBadgeClass = 'badge-cheap-1';
@@ -870,7 +970,7 @@
                 const baseMonth = currentBaseline === '2021' ? s.Baseline_ROE_2021_Month : s.Baseline_ROE_2019_Month;
                 const roeChange = currentBaseline === '2021' ? s.ROE_Change_2021 : s.ROE_Change_2019;
                 
-                const rec = getActionRecommendation(s.Current_PE, s.Minus1SD_PE, s.Mean_PE, roeChange);
+                const rec = getActionRecommendation(s.Current_PE, stats.Minus1SD, stats.Mean, roeChange);
                 let recBadgeClass = 'badge-rec-neutral';
                 if (rec === 'Strong Re-rating Candidate') recBadgeClass = 'badge-rec-strong';
                 else if (rec === 'Potential Value Trap') recBadgeClass = 'badge-rec-trap';
@@ -886,9 +986,9 @@
                 tr.innerHTML = `
                     <td><strong>${sec}</strong></td>
                     <td>${s.Current_PE !== null ? s.Current_PE.toFixed(2) : '-'}</td>
-                    <td>${s.Mean_PE.toFixed(2)}</td>
+                    <td>${stats.Mean.toFixed(2)}</td>
                     <td><span class="badge ${zBadgeClass}">${zScore.toFixed(2)}</span></td>
-                    <td><span class="badge ${zScore <= -1 ? 'badge-cheap-1' : 'badge-avg'}">${s.PE_Status}</span></td>
+                    <td><span class="badge ${zScore <= -1 ? 'badge-cheap-1' : 'badge-avg'}">${stats.Status}</span></td>
                     <td>${s.Current_ROE !== null ? s.Current_ROE.toFixed(2) + '%' : '-'}</td>
                     <td>${baseROE !== null ? baseROE.toFixed(2) + '%' : '-'} <span style="font-size:10px;color:var(--steel-grey)">(${baseMonth})</span></td>
                     <td class="${roeChangeClass}">${roeChangeStr}</td>
@@ -954,14 +1054,15 @@
             
             sectors.forEach(sec => {
                 const s = SECTOR_SUMMARY[sec];
-                minus2sd.push(s.Minus2SD_PE);
-                minus1sd.push(s.Minus1SD_PE);
-                plus1sd.push(s.Plus1SD_PE);
-                plus2sd.push(s.Plus2SD_PE);
-                meanPE.push(s.Mean_PE);
+                const stats = getPEStats(s);
+                minus2sd.push(stats.Minus2SD);
+                minus1sd.push(stats.Minus1SD);
+                plus1sd.push(stats.Plus1SD);
+                plus2sd.push(stats.Plus2SD);
+                meanPE.push(stats.Mean);
                 currentPE.push(s.Current_PE);
-                minPE.push(s.Min_PE);
-                maxPE.push(s.Max_PE);
+                minPE.push(stats.Min);
+                maxPE.push(stats.Max);
             });
             
             // Box whiskers represent -2SD to +2SD
@@ -1026,10 +1127,11 @@
                 showlegend: true
             };
             
+            const periodStr = currentPeriod === 'full' ? '2010 - Current' : '2010-19 & 2022-Current';
             const layout = {
                 ...plotlyLayoutTemplate,
                 title: {
-                    text: 'PER Distribution Bands & Current Valuation by Sector',
+                    text: `PER Distribution Bands & Current Valuation by Sector (${periodStr})`,
                     font: { size: 18, color: '#3F4C54' }
                 },
                 yaxis: {
@@ -1054,17 +1156,18 @@
             if (!sector) return;
             
             const s = SECTOR_SUMMARY[sector];
+            const stats = getPEStats(s);
             const secHistory = SECTOR_HISTORY.filter(h => h.Sector === sector).sort((a,b) => a.Month.localeCompare(b.Month));
             
             const months = secHistory.map(h => h.Month);
             const peSeries = secHistory.map(h => h.PE);
             
             const badge = document.getElementById('pe-badge-' + chartIdx);
-            badge.textContent = s.PE_Status;
+            badge.textContent = stats.Status;
             badge.className = 'badge';
-            if (s.Current_PE_ZScore <= -1) {
+            if (stats.ZScore <= -1) {
                 badge.classList.add('badge-cheap-2');
-            } else if (s.Current_PE_ZScore >= 1) {
+            } else if (stats.ZScore >= 1) {
                 badge.classList.add('badge-expensive');
             } else {
                 badge.classList.add('badge-avg');
@@ -1081,7 +1184,7 @@
             
             const meanLine = {
                 x: [months[0], months[months.length-1]],
-                y: [s.Mean_PE, s.Mean_PE],
+                y: [stats.Mean, stats.Mean],
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Mean',
@@ -1090,7 +1193,7 @@
             
             const p1sdLine = {
                 x: [months[0], months[months.length-1]],
-                y: [s.Plus1SD_PE, s.Plus1SD_PE],
+                y: [stats.Plus1SD, stats.Plus1SD],
                 type: 'scatter',
                 mode: 'lines',
                 name: '+1SD',
@@ -1099,7 +1202,7 @@
             
             const p2sdLine = {
                 x: [months[0], months[months.length-1]],
-                y: [s.Plus2SD_PE, s.Plus2SD_PE],
+                y: [stats.Plus2SD, stats.Plus2SD],
                 type: 'scatter',
                 mode: 'lines',
                 name: '+2SD',
@@ -1108,7 +1211,7 @@
             
             const m1sdLine = {
                 x: [months[0], months[months.length-1]],
-                y: [s.Minus1SD_PE, s.Minus1SD_PE],
+                y: [stats.Minus1SD, stats.Minus1SD],
                 type: 'scatter',
                 mode: 'lines',
                 name: '-1SD',
@@ -1117,23 +1220,24 @@
             
             const m2sdLine = {
                 x: [months[0], months[months.length-1]],
-                y: [s.Minus2SD_PE, s.Minus2SD_PE],
+                y: [stats.Minus2SD, stats.Minus2SD],
                 type: 'scatter',
                 mode: 'lines',
                 name: '-2SD',
                 line: { color: '#2E7D32', width: 1.5 }
             };
             
+            const periodStr = currentPeriod === 'full' ? 'Full Period' : 'Ex-COVID';
             const layout = {
                 ...plotlyLayoutTemplate,
                 title: {
-                    text: `${sector} P/E Bands Overlay`,
+                    text: `${sector} P/E Bands Overlay (${periodStr})`,
                     font: { size: 14, color: '#3F4C54' }
                 },
                 yaxis: {
                     ...plotlyLayoutTemplate.yaxis,
                     title: 'P/E (Times)',
-                    range: [0, Math.min(s.Max_PE * 1.1, 100)]
+                    range: [0, Math.min(stats.Max * 1.1, 100)]
                 },
                 xaxis: {
                     ...plotlyLayoutTemplate.xaxis,
